@@ -1,0 +1,129 @@
+Building an entire multiplayer live-map strategy game from scratch is a massive undertaking that requires dozens of interlinked files—database schemas, websocket routers, authentication, and the frontend map engine. We can't generate it all in one single massive text block, but we can instantly build the **Core Engine**.
+Let's lay down the exact foundational files needed so that when you run pnpm run dev in your Codespace, the server boots up, the React frontend compiles, and you see the first pulse of the Dead Oahu command center.
+Here are the 4 essential files to create in your repository to get the game engine running:
+### 1. The Server Engine (server/_core/index.ts)
+Create a folder named server, then a folder inside it named _core, and create index.ts. This file handles the Express backend and seamlessly serves the Vite frontend.
+```typescript
+import express from 'express';
+import { createServer as createViteServer } from 'vite';
+import http from 'http';
+
+async function startServer() {
+  const app = express();
+  const server = http.createServer(app);
+  const PORT = process.env.PORT || 3000;
+
+  // Set up Vite for frontend hot-reloading
+  const vite = await createViteServer({
+    server: { middlewareMode: true },
+    appType: 'spa',
+  });
+
+  app.use(vite.middlewares);
+
+  // API Endpoint for future zombie/player data
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'Dead Oahu Server is LIVE', activeZombies: 0 });
+  });
+
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`🔥 Dead Oahu Engine running on port ${PORT}`);
+  });
+}
+
+startServer().catch(console.error);
+
+```
+### 2. The Vite Config (vite.config.ts)
+Create this in the very root folder of your project (next to your package.json). This tells the frontend how to build itself.
+```typescript
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './client/src'),
+    },
+  },
+  root: path.resolve(__dirname, 'client'),
+  build: {
+    outDir: path.resolve(__dirname, 'dist/public'),
+    emptyOutDir: true,
+  },
+});
+
+```
+### 3. The HTML Entry Point (client/index.html)
+Create a folder named client, and put this index.html file right inside it. This is the blank canvas for the live map.
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Dead Oahu | Command Center</title>
+  </head>
+  <body class="bg-black text-white overflow-hidden">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
+```
+### 4. The React Frontend (client/src/main.tsx & client/src/App.tsx)
+Inside the client folder, create a src folder.
+**First, create main.tsx:**
+```typescript
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import './index.css'; // We'll add Tailwind here later
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+```
+**Next, create App.tsx:**
+```typescript
+import React, { useState, useEffect } from 'react';
+
+export default function App() {
+  const [serverStatus, setServerStatus] = useState('Connecting to Oahu servers...');
+
+  useEffect(() => {
+    fetch('/api/health')
+      .then(res => res.json())
+      .then(data => setServerStatus(data.status))
+      .catch(() => setServerStatus('Connection lost. The horde is near.'));
+  }, []);
+
+  return (
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#111', color: '#00ffcc', fontFamily: 'monospace' }}>
+      <h1 style={{ fontSize: '3rem', margin: '0', textTransform: 'uppercase', letterSpacing: '2px' }}>
+        Dead Oahu
+      </h1>
+      <p style={{ fontSize: '1.2rem', marginTop: '10px' }}>
+        Live Map Command Center
+      </p>
+      <div style={{ marginTop: '30px', padding: '15px', border: '1px solid #00ffcc', borderRadius: '8px' }}>
+        Status: {serverStatus}
+      </div>
+    </div>
+  );
+}
+
+```
+### **The Launch Sequence**
+Once you have pasted these 4 files into your Codespace, hit the terminal at the bottom of the screen with this exact command to start the engine:
+```bash
+pnpm run dev
+
+```
+The terminal will light up, and Codespaces will give you a little pop-up saying "Your application running on port 3000 is available." Click **Open in Browser**.
+Once you verify the engine is breathing and the "Dead Oahu" screen is live, we can inject the Drizzle database schema to start tracking player coordinates, or we can drop in the Google Maps API layer to visualize the island. Which subsystem do we tackle next?
